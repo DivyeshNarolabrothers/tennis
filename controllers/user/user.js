@@ -64,32 +64,70 @@ exports.login = async (req, res) => {
   }
 }
 
+// exports.user_auth = async (req, res, next) => {
+//   try {
+//     const token = req.headers.user_token;
+//     console.log("t ===>", req.headers.user_token);
+
+//     if (!token) {
+//       return res.status(401).json({
+//         status: false,
+//         message: "require a user token",
+//       });
+//     }
+//     const valid_token = jwt.verify(token, JWT_SECRET);
+//     if (!valid_token) throw new Error("Please authenticate a valid token");
+//     let user = await User.findOne({ _id: valid_token._id });
+//     if (!user) {
+//       throw new Error("user not found");
+//     }
+//     console.log("user name ===>", user.name);
+//     req.user = user;
+//     next();
+//   } catch (error) {
+//     console.log(error.message);
+//     return res.status(500).json({
+//       status: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
+
 exports.user_auth = async (req, res, next) => {
   try {
-    const token = req.headers.user_token;
-    console.log("t ===>", req.headers.user_token);
+    const authHeader = req.headers['user_token'];
+    
+    if (!authHeader) {
+      return res.status(401).json({ status: false, message: "Authorization header is missing" });
+    }
 
-    if (!token) {
-      return res.status(401).json({
-        status: false,
-        message: "require a user token",
-      });
+    const tokenParts = authHeader.split(' ');
+    if (tokenParts[0] !== 'Bearer' || tokenParts.length !== 2) {
+      return res.status(401).json({ status: false, message: "Authorization header must be in the format: Bearer <token>" });
     }
-    const valid_token = jwt.verify(token, JWT_SECRET);
-    if (!valid_token) throw new Error("Please authenticate a valid token");
-    let user = await User.findOne({ _id: valid_token._id });
+
+    const token = tokenParts[1];
+    console.log("Extracted Token:", token); // Log token for debugging
+
+    const valid_token = jwt.verify(token, JWT_SECRET); // Verify the token
+
+    const user = await User.findOne({ _id: valid_token._id });
     if (!user) {
-      throw new Error("user not found");
+      return res.status(404).json({ status: false, message: "User not found" });
     }
-    console.log("user name ===>", user.first_name);
-    req.user = user;
-    next();
+
+    req.user = user; // Attach user to request
+    next(); // Proceed to next middleware
   } catch (error) {
-    console.log(error.message);
-    return res.status(500).json({
-      status: false,
-      message: error.message,
-    });
+    console.error("Auth error:", error.message); // Log the error
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ status: false, message: "Token has expired" });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(400).json({ status: false, message: "Invalid token format or signature" });
+    } else {
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
+    }
   }
 };
 
