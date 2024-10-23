@@ -111,6 +111,8 @@ exports.user_auth = async (req, res, next) => {
     console.log("Extracted Token:", token); // Log token for debugging
 
     const valid_token = jwt.verify(token, JWT_SECRET); // Verify the token
+    console.log(valid_token,"token====");
+    
 
     const user = await User.findOne({ _id: valid_token._id });
     if (!user) {
