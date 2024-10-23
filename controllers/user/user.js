@@ -1,7 +1,7 @@
 const User = require("../../model/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "digiPay-jwt-secret";
+const JWT_SECRET = "user_token";
 
 
 
@@ -130,6 +130,9 @@ exports.user_auth = async (req, res, next) => {
     }
   }
 };
+
+
+
 
 exports.registerUser = async(req, res, next) => {
   try {
