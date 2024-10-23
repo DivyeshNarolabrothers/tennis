@@ -94,35 +94,72 @@ exports.login = async (req, res) => {
 // };
 
 
+// exports.user_auth = async (req, res, next) => {
+//   try {
+//     const authHeader = req.headers['user_token'];
+    
+//     if (!authHeader) {
+//       return res.status(401).json({ status: false, message: "Authorization header is missing" });
+//     }
+
+//     const tokenParts = authHeader.split(' ');
+//     if (tokenParts[0] !== 'Bearer' || tokenParts.length !== 2) {
+//       return res.status(401).json({ status: false, message: "Authorization header must be in the format: Bearer <token>" });
+//     }
+
+//     const token = tokenParts[1];
+//     console.log("Extracted Token:", token); // Log token for debugging
+
+//     const valid_token = jwt.verify(token, JWT_SECRET); // Verify the token
+//     console.log(valid_token,"token====");
+    
+
+//     const user = await User.findOne({ _id: valid_token._id });
+//     if (!user) {
+//       return res.status(404).json({ status: false, message: "User not found" });
+//     }
+
+//     req.user = user; // Attach user to request
+//     next(); // Proceed to next middleware
+//   } catch (error) {
+//     console.error("Auth error:", error.message); // Log the error
+//     if (error.name === 'TokenExpiredError') {
+//       return res.status(401).json({ status: false, message: "Token has expired" });
+//     } else if (error.name === 'JsonWebTokenError') {
+//       return res.status(400).json({ status: false, message: "Invalid token format or signature" });
+//     } else {
+//       return res.status(500).json({ status: false, message: "Internal Server Error" });
+//     }
+//   }
+// };
+
+
 exports.user_auth = async (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+
+  if (!authHeader) {
+    return res.status(401).json({ status: false, message: "Authorization header is missing" });
+  }
+
+  const tokenParts = authHeader.split(' ');
+  if (tokenParts[0] !== 'Bearer' || tokenParts.length !== 2) {
+    return res.status(401).json({ status: false, message: "Authorization header must be in the format: Bearer <token>" });
+  }
+
+  const token = tokenParts[1];
+
   try {
-    const authHeader = req.headers['user_token'];
-    
-    if (!authHeader) {
-      return res.status(401).json({ status: false, message: "Authorization header is missing" });
-    }
-
-    const tokenParts = authHeader.split(' ');
-    if (tokenParts[0] !== 'Bearer' || tokenParts.length !== 2) {
-      return res.status(401).json({ status: false, message: "Authorization header must be in the format: Bearer <token>" });
-    }
-
-    const token = tokenParts[1];
-    console.log("Extracted Token:", token); // Log token for debugging
-
-    const valid_token = jwt.verify(token, JWT_SECRET); // Verify the token
-    console.log(valid_token,"token====");
-    
-
+    const valid_token = jwt.verify(token, JWT_SECRET);
     const user = await User.findOne({ _id: valid_token._id });
+
     if (!user) {
       return res.status(404).json({ status: false, message: "User not found" });
     }
 
     req.user = user; // Attach user to request
-    next(); // Proceed to next middleware
+    next(); // Proceed to the next middleware
   } catch (error) {
-    console.error("Auth error:", error.message); // Log the error
+    console.error("Auth error:", error.message);
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({ status: false, message: "Token has expired" });
     } else if (error.name === 'JsonWebTokenError') {
@@ -132,8 +169,6 @@ exports.user_auth = async (req, res, next) => {
     }
   }
 };
-
-
 
 
 exports.registerUser = async(req, res, next) => {
