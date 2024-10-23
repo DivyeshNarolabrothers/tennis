@@ -13,8 +13,13 @@ const user_auth = require('./controllers/user/user');
  
 
 var app = express();
-app.use(cors())
+// app.use(cors())
 
+app.use(cors({
+  origin: 'http://your-frontend-url.com', // Replace with your frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Add other methods as needed
+  allowedHeaders: ['Authorization', 'Content-Type'], // Ensure Authorization header is allowed
+}));
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
