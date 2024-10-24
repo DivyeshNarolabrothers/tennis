@@ -6,6 +6,7 @@ const User = require("../../../model/user");
 const transactiondata = require("../../../model/transactions");
 const MarketStatus = require('../../../model/marketFreeze');
 const Player = require("../../../model/player");
+const JWT_SECRET = "admin_token";
 
 
 exports.signup = async (req, res) => {
@@ -54,7 +55,7 @@ exports.login = async (req, res) => {
     if (!valid_password) {
       throw new Error("password do not match!");
     }
-    var token = await jwt.sign({ _id: valid_email._id }, "rushabh");
+    var token = await jwt.sign({ _id: valid_email._id }, JWT_SECRET);
     console.log(token);
 
     return res.status(200).json({
@@ -72,34 +73,75 @@ exports.login = async (req, res) => {
   }
 };
 
+// exports.admin_auth = async (req, res, next) => {
+//   try {
+//     const token = req.headers.admin_token;
+//     if (!token) {
+//       return res.status(401).json({ error: "requirea a token" });
+//     }
+//     // console.log(token)
+
+//     let valid_token = await jwt.verify(token, "rushabh");
+//     if (!valid_token) {
+//       throw new Error("require valid token ");
+//     }
+
+//     let admin = await admin_model.findOne({ _id: valid_token._id });
+//     if (!admin) {
+//       throw new Error("Admin not found");
+//     }
+//     req.admin = admin;
+//     console.log("admin name===>" + req.admin.name);
+//     next();
+//   } catch (error) {
+//     console.log(error.message);
+//     return res.status(500).json({
+//       status: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
+
 exports.admin_auth = async (req, res, next) => {
+  const authHeader = req.headers['authorization']; // Extract the Authorization header
+
+  if (!authHeader) {
+    return res.status(401).json({ status: false, message: "Authorization header is missing" });
+  }
+
+  const tokenParts = authHeader.split(' '); // Split the token to check "Bearer <token>"
+  
+  if (tokenParts[0] !== 'Bearer' || tokenParts.length !== 2) {
+    return res.status(401).json({ status: false, message: "Authorization header must be in the format: Bearer <token>" });
+  }
+
+  const token = tokenParts[1]; // Extract the token part
+
   try {
-    const token = req.headers.admin_token;
-    if (!token) {
-      return res.status(401).json({ error: "requirea a token" });
-    }
-    // console.log(token)
-
-    let valid_token = await jwt.verify(token, "rushabh");
-    if (!valid_token) {
-      throw new Error("require valid token ");
-    }
-
-    let admin = await admin_model.findOne({ _id: valid_token._id });
+    const valid_token = jwt.verify(token, JWT_SECRET); // Verify token with the secret "rushabh"
+    
+    const admin = await admin_model.findOne({ _id: valid_token._id }); // Find admin using token's _id
+    
     if (!admin) {
-      throw new Error("Admin not found");
+      return res.status(404).json({ status: false, message: "Admin not found" });
     }
-    req.admin = admin;
-    console.log("admin name===>" + req.admin.name);
-    next();
+
+    req.admin = admin; // Attach admin to the request object for further processing
+    next(); // Proceed to the next middleware
   } catch (error) {
-    console.log(error.message);
-    return res.status(500).json({
-      status: false,
-      message: error.message,
-    });
+    console.error("Auth error:", error.message); // Log error for debugging
+
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ status: false, message: "Token has expired" });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(400).json({ status: false, message: "Invalid token format or signature" });
+    } else {
+      return res.status(500).json({ status: false, message: "Internal Server Error" });
+    }
   }
 };
+
 
 exports.userupdated_player =async (req, res) => {
   const { userId } = req.params;
