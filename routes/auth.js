@@ -15,8 +15,9 @@ router.get("/", function (req, res, next) {
   res.send("respond with a resource");
 });
 
-router.post("/admin/signup", admin_Controler.signup);
-router.post("/admin/login", admin_Controler.login);
+// router.post("/admin/signup", admin_Controler.signup);
+router.post("/signup", admin_Controler.signup);
+router.post("/login", admin_Controler.login);
 
 
 
