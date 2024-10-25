@@ -29,8 +29,3 @@ router.patch("/sell-player/:userId",marketFreezeMiddleware,user_Controler.sellPl
 
 
 module.exports = router;
-35.200.147.33 par site
-35.200.147.33/api par backend
-admin.imageenhance.in par admin ok done 
-have mare admin ma api change ny krvi pade url ha 35.200.147.33/api aa muki ne update kari dejo admin ma build nthi banavu to direct process krvani
-admin ma url change kari etle build to banavij pade ok
