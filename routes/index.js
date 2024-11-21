@@ -6,7 +6,7 @@ const multer = require("../helper/multer.profile");
 
 
 router.post("/market-freeze",admin_Controler.market_freeze);   //done
-
+router.delete("/user/delete/:id",admin_Controler.userDeleted) //done
 
 
 
@@ -33,7 +33,9 @@ router.get("/userteamlist/:id",admin_Controler.userTeamList);   //done
 router.get("/userList",admin_Controler.userList)         //done
 
 
-
+router.post("/banner_create",admin_Controler.bannertext);
+router.patch("/banner_update/:id",admin_Controler.bannerupdate);
+router.get("/bannertext",admin_Controler.textdisplay)
 
 
 module.exports = router;

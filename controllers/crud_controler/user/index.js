@@ -6,13 +6,66 @@ const FAQ = require("../../../model/FAQ");
 const MarketStatus = require('../../../model/marketFreeze');
 const { default: mongoose } = require("mongoose");
 const player = require("../../../model/player");
+const Text =require('../../../model/banner')
 
 // User registration api
+
+// async function userUpdated(req, res, next) {
+//   try {
+//     const userId = req.params.id;
+//     let { name, email, password } = req.body;
+
+//     // Fetch the user from the database
+//     let user = await User.findById(userId);
+//     if (!user) {
+//       return res.status(404).json({
+//         status: false,
+//         message: "User not found",
+//       });
+//     }
+
+//     // Handle profile_image update if provided
+//     let profile_image = user.profile_image; // Keep the existing image by default
+//     if (req?.files) {
+//       req.files.map((file) => {
+//         if (file.fieldname === "profile_image") {
+//           profile_image = file.filename;
+//         }
+//       });
+//     }
+
+//     // Update fields only if they are provided in the request body
+//     if (name) user.name = name;
+//     if (email) user.email = email;
+//     if (password) user.password = await bcrypt.hash(password, 12); // Hash password if provided
+   
+// console.log(password);
+
+//     // Handle profile image update
+//     user.profile_image = profile_image;
+
+//     // Save updated user data in the database
+//     let updatedUser = await user.save();
+
+//     // Return success response with updated user data
+//     return res.status(200).json({
+//       status: true,
+//       message: "User updated successfully",
+//       user: updatedUser,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({
+//       status: false,
+//       message: error.message,
+//     });
+//   }
+// }
 
 async function userUpdated(req, res, next) {
   try {
     const userId = req.params.id;
-    let { name, email, password, credits, team } = req.body;
+    let { name, email, password,credits } = req.body;
 
     // Fetch the user from the database
     let user = await User.findById(userId);
@@ -36,13 +89,10 @@ async function userUpdated(req, res, next) {
     // Update fields only if they are provided in the request body
     if (name) user.name = name;
     if (email) user.email = email;
-    if (password) user.password = await bcrypt.hash(password, 12); // Hash password if provided
     if (credits) user.credits = credits;
-    if (team) {
-      if (team.name) user.team.name = team.name;
-      if (team.profile_image) user.team.profile_image = team.profile_image;
-      if (team.players) user.team.players = team.players; // This will replace the whole player array if provided
-    }
+    if (password) user.password = password; // Save password in plain text
+
+    console.log(password);
 
     // Handle profile image update
     user.profile_image = profile_image;
@@ -286,222 +336,6 @@ async function addPlayer(req, res) {
   }
 }
 
-
-// async function overrall(req, res) {
-//   try {
-//     // Retrieve all users
-//     const users = await User.find(); // Ensure to use 'User' and not 'user'
-
-//     // Extract player values from each user's team
-//     const playerValues = users.flatMap(user => {
-//       return user.team && user.team.players ? user.team.players.map(player => ({
-//         _id: player._id,
-//         share_quantity: player.share_quantity,
-//         value: player.value // Assuming user value is stored here
-//       })) : [];
-//     });
-
-//     // Log the retrieved player IDs for debugging
-//     console.log("Player Values:", playerValues);
-
-//     // Extract player IDs for querying the Player model
-//     const playerIds = playerValues.map(player => player._id);
-    
-//     // Retrieve players from the database that match the extracted player IDs
-//     const playersFromDb = await Player.find({ _id: { $in: playerIds } });
-
-//     // Log the players retrieved from the database for debugging
-//     console.log("Players from DB:", playersFromDb);
-
-//     // Calculate value differences and store in a variable
-//     const valueDifferences = playerValues.map(playerValue => {
-//       const playerFromDb = playersFromDb.find(player => player._id.toString() === playerValue._id.toString());
-//       if (playerFromDb) {
-//         const value_difference = playerValue.value - playerFromDb.value; // Calculate the difference
-//         const totalValue = value_difference * playerValue.share_quantity; // Multiply by share_quantity
-//         return {
-//           _id: playerValue._id,
-//           share_quantity: playerValue.share_quantity,
-//           user_playerValue: playerValue.value,
-//           player_value: playerFromDb.value,
-//           value_difference,
-//           total_value: totalValue // Store the total value
-//         };
-//       }
-//       return null; // or handle missing players as needed
-//     }).filter(Boolean); // Filter out any null values if player not found
-
-//     // Log the value differences for debugging
-//     console.log("Value Differences:", valueDifferences);
-
-//     // Calculate the sum of total_values
-//     const totalValueSum = valueDifferences.reduce((sum, player) => sum + player.total_value, 0);
-    
-//     // Calculate grand total value (if needed, you can add more logic here)
-//     const grandTotalValue = totalValueSum; // This can be modified if you have additional criteria for grand total
-
-//     console.log("Grand Total Value:", grandTotalValue);
-
-//     // Send response back with the combined data
-//     res.status(200).send({ 
-//       message: "Player values retrieved successfully", 
-//       valueDifferences,
-//       grand_total_value: grandTotalValue
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// }
-
-
-
-// async function in_play_value(req, res) {
-//   try {
-//     // Retrieve all users
-//     const users = await User.find(); // Ensure to use 'User' and not 'user'
-
-//     // Extract player values and user credits from each user's team
-//     const userPlayerData = users.map(user => {
-//       const playerValues = user.team && user.team.players ? user.team.players.map(player => ({
-//         _id: player._id,
-//         share_quantity: player.share_quantity,
-//         value: player.value // Assuming user value is stored here
-//       })) : [];
-
-//       return {
-//         user_id: user._id,
-//         name: user.name,
-//         credits: user.credits || 0, // Assuming credits field exists in user schema
-//         playerValues
-//       };
-//     });
-
-//     // Log the user and player data for debugging
-//     console.log("User Player Data:", userPlayerData);
-
-//     // Flatten player values from all users
-//     const allPlayerValues = userPlayerData.flatMap(userData => userData.playerValues);
-
-//     // Extract player IDs for querying the Player model
-//     const playerIds = allPlayerValues.map(player => player._id);
-
-//     // Retrieve players from the database that match the extracted player IDs
-//     const playersFromDb = await Player.find({ _id: { $in: playerIds } });
-
-//     // Log the players retrieved from the database for debugging
-//     console.log("Players from DB:", playersFromDb);
-
-//     // Calculate value differences for each user
-//     const userValueDifferences = userPlayerData.map(userData => {
-//       const valueDifferences = userData.playerValues.map(playerValue => {
-//         const playerFromDb = playersFromDb.find(player => player._id.toString() === playerValue._id.toString());
-//         if (playerFromDb) {
-//           const totalValue = playerFromDb.value * playerValue.share_quantity; // Multiply player's value from DB by share_quantity
-//           return {
-//             _id: playerValue._id,
-//             share_quantity: playerValue.share_quantity,
-//             user_playerValue: playerValue.value,
-//             player_value: playerFromDb.value,
-//             total_value: totalValue // Store the total value
-//           };
-//         }
-//         return null; // or handle missing players as needed
-//       }).filter(Boolean); // Filter out any null values if player not found
-
-//       // Calculate the sum of total_values for this user
-//       const totalValueSum = valueDifferences.reduce((sum, player) => sum + player.total_value, 0);
-
-//       return {
-//         user_id: userData.user_id,
-//         name: userData.name,
-//         credits: userData.credits,
-//         valueDifferences,
-//         grand_total_value: totalValueSum
-//       };
-//     });
-
-//     // Log the user value differences for debugging
-//     console.log("User Value Differences:", userValueDifferences);
-
-//     // Send response back with the combined data
-//     res.status(200).send({
-//       message: "Player values and user credits retrieved successfully",
-//       userValueDifferences
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// }
-// async function overrall(req, res) {
-//   try {
-//     // Retrieve user ID from request parameters
-//     const userId = req.params.id;
-
-//     // Retrieve the specific user by ID
-//     const user = await User.findById(userId);
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-//     // Extract player values from the user's team
-//     const playerValues = user.team && user.team.players 
-//       ? user.team.players.map(player => ({
-//           _id: player._id,
-//           share_quantity: player.share_quantity,
-//           value: player.value // Assuming user value is stored here
-//         })) 
-//       : [];
-
-//     // Log the retrieved player values for debugging
-//     console.log("Player Values:", playerValues);
-
-//     // Extract player IDs for querying the Player model
-//     const playerIds = playerValues.map(player => player._id);
-    
-//     // Retrieve players from the database that match the extracted player IDs
-//     const playersFromDb = await Player.find({ _id: { $in: playerIds } });
-
-//     // Log the players retrieved from the database for debugging
-//     console.log("Players from DB:", playersFromDb);
-
-//     // Calculate value differences and store in a variable
-//     const valueDifferences = playerValues.map(playerValue => {
-//       const playerFromDb = playersFromDb.find(player => player._id.toString() === playerValue._id.toString());
-//       if (playerFromDb) {
-//         const value_difference = playerValue.value - playerFromDb.value; // Calculate the difference
-//         const totalValue = value_difference * playerValue.share_quantity; // Multiply by share_quantity
-//         return {
-//           _id: playerValue._id,
-//           share_quantity: playerValue.share_quantity,
-//           user_playerValue: playerValue.value,
-//           player_value: playerFromDb.value,
-//           value_difference,
-//           total_value: totalValue // Store the total value
-//         };
-//       }
-//       return null; // Handle missing players as needed
-//     }).filter(Boolean); // Filter out any null values if player not found
-
-//     // Log the value differences for debugging
-//     console.log("Value Differences:", valueDifferences);
-
-//     // Calculate the sum of total_values
-//     const totalValueSum = valueDifferences.reduce((sum, player) => sum + player.total_value, 0);
-    
-//     // Send response back with the combined data
-//     res.status(200).send({ 
-//       message: "Player values retrieved successfully", 
-//       valueDifferences,
-//       grand_total_value: totalValueSum // This can be modified if you have additional criteria for grand total
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// }
-
 async function overrall(req, res) {
   try {
     // Retrieve user ID from request parameters
@@ -676,6 +510,7 @@ async function userProfile(req, res) {
         _id: user._id,
         name: user.name,
         email: user.email,
+        password:user.password,
         profile_image: user.profile_image,
         credits: user.credits,
         user_status: user.user_status,
@@ -1110,6 +945,17 @@ async function sellPlayer(req, res) {
   }
 }
 
+async function textList(req,res) {
+  try {
+    const text = await Text.find();
+    res.status(200).json(text);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching FAQs", error });
+  }
+}
+
+
+
 
 module.exports = {
   userUpdated,
@@ -1125,6 +971,7 @@ module.exports = {
   status_updated,
   playerBuy,
   sellPlayer,
-  userList
+  userList,
+  textList
 
 };

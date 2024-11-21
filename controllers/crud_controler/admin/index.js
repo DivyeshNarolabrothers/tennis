@@ -7,6 +7,7 @@ const transactiondata = require("../../../model/transactions");
 const MarketStatus = require('../../../model/marketFreeze');
 const Player = require("../../../model/player");
 const JWT_SECRET = "admin_token";
+const Text =require('../../../model/banner')
 
 
 exports.signup = async (req, res) => {
@@ -17,7 +18,6 @@ exports.signup = async (req, res) => {
     }
     let uniqe_email = await admin_model.findOne({ email: email });
     if (uniqe_email) throw new Error("Email is alredy exits");
-    password = (await bcrypt.hash(password, 8)).toString();
     let result = await admin_model.create({
       name: name,
       surname: surname,
@@ -40,38 +40,38 @@ exports.signup = async (req, res) => {
     });
   }
 };
-exports.login = async (req, res) => {
-  try {
-    let { email, password } = req.body;
-    if (!email || !password) {
-      throw new Error("Enter your detail");
-    }
-    let valid_email = await admin_model.findOne({ email: email });
-    if (!valid_email) {
-      throw new Error("Your Email is Not Found!");
-    }
+// exports.login = async (req, res) => {
+//   try {
+//     let { email, password } = req.body;
+//     if (!email || !password) {
+//       throw new Error("Enter your detail");
+//     }
+//     let valid_email = await admin_model.findOne({ email: email });
+//     if (!valid_email) {
+//       throw new Error("Your Email is Not Found!");
+//     }
 
-    let valid_password = await bcrypt.compare(password, valid_email.password);
-    if (!valid_password) {
-      throw new Error("password do not match!");
-    }
-    var token = await jwt.sign({ _id: valid_email._id }, JWT_SECRET);
-    console.log(token);
+//     let valid_password = await bcrypt.compare(password, valid_email.password);
+//     if (!valid_password) {
+//       throw new Error("password do not match!");
+//     }
+//     var token = await jwt.sign({ _id: valid_email._id }, JWT_SECRET);
+//     console.log(token);
 
-    return res.status(200).json({
-      status: true,
-      message: "you are logdin",
-      token,
-    });
-  } catch (error) {
-    console.log(error.message);
+//     return res.status(200).json({
+//       status: true,
+//       message: "you are logdin",
+//       token,
+//     });
+//   } catch (error) {
+//     console.log(error.message);
 
-    return res.status(500).json({
-      status: true,
-      message: error.message,
-    });
-  }
-};
+//     return res.status(500).json({
+//       status: true,
+//       message: error.message,
+//     });
+//   }
+// };
 
 // exports.admin_auth = async (req, res, next) => {
 //   try {
@@ -101,6 +101,46 @@ exports.login = async (req, res) => {
 //     });
 //   }
 // };
+
+
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      throw new Error("Please enter your details.");
+    }
+
+    // Check if the email exists in the database
+    const user = await admin_model.findOne({ email: email });
+    if (!user) {
+      throw new Error("Your email is not found!");
+    }
+
+    // Compare the plaintext password directly
+    if (user.password !== password) {
+      throw new Error("Password does not match!");
+    }
+
+    // Generate a token
+    const token = await jwt.sign({ _id: user._id }, JWT_SECRET);
+    console.log(token);
+
+    // Send the response
+    return res.status(200).json({
+      status: true,
+      message: "You are logged in",
+      token,
+    });
+  } catch (error) {
+    console.error(error.message);
+
+    return res.status(500).json({
+      status: false,
+      message: error.message,
+    });
+  }
+};
 
 
 exports.admin_auth = async (req, res, next) => {
@@ -668,3 +708,82 @@ exports.market_freeze = async (req, res) => {
 }
 
 
+exports.userDeleted = async (req,res)=>{
+  try {
+    let user_id = req.params.id;
+
+    // Find the player by ID and delete it
+    const deletedPlayer = await User.findByIdAndDelete(user_id);
+
+    // If player not found, return 404
+    if (!deletedPlayer) {
+      return res.status(404).send({ message: "Player not found" });
+    }
+
+    // Respond with a success message
+    res
+      .status(200)
+      .send({ message: "Player deleted successfully", deletedPlayer });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .send({ message: "Error deleting player", error: error.message });
+  }
+}
+
+exports.bannertext = async(req,res)=>{
+  const { text } = req.body;
+
+  if (!text) {
+    return res
+      .status(400)
+      .json({ message: "Both Text are required." });
+  }
+
+  try {
+    const newText = new Text({ text});
+    await newText.save();
+    res.status(201).json({ message: "bannertext created successfully", newText });
+  } catch (error) {
+    res.status(500).json({ message: "Error creating bannertext", error });
+  }
+}
+
+exports.bannerupdate = async(req,res)=>{
+  const { id } = req.params;
+  const { text } = req.body;
+
+  if (!text) {
+    return res.status(400).json({
+      message: "At least one field (question or answer) must be provided.",
+    });
+  }
+
+  try {
+    const updatedText = await Text.findByIdAndUpdate(
+      id,
+      { $set: { ...(text && { text }) } }, // Update only provided fields
+      { new: true, runValidators: true } // Return the updated document and run validation
+    );
+
+    if (!updatedText) {
+      return res.status(404).json({ message: "FAQ not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "FAQ updated successfully", updatedText });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating FAQ", error });
+  }
+}
+
+exports.textdisplay = async(req,res)=>{
+  try {
+    const text = await Text.find();
+    res.status(200).json(text);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching FAQs", error });
+  }
+}

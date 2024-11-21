@@ -2,6 +2,40 @@ const User = require("../../model/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const JWT_SECRET = "user_token";
+const sendMail   = require('../../helper/mail_sender');
+
+// exports.chnage_password = async (req, res, next) => {
+//   try {
+
+//     let { password, new_password, confirm_password } = req.body
+//     if (!password || !new_password || !confirm_password) {
+//       throw new Error('enter your details')
+//     }
+//     if (new_password !== confirm_password) {
+//       throw new Error('your new password and confirm password are diffrent!')
+//     }
+//     const current_password = await bcrypt.compare(password, req.user.password);
+//     if (!current_password) {
+//       throw new Error('your current password is wrong')
+//     }
+
+//     new_password = await bcrypt.hash(new_password, 8)
+//     let result = await User.findByIdAndUpdate({ _id: req.user._id }, {
+//       password: new_password
+//     }, { new: true })
+//     return res.status(200).json({
+//       status: true,
+//       message: "Your password has been successfully changed",
+//       result
+//     })
+//   } catch (error) {
+//     console.log(error.message)
+//     return res.status(500).json({
+//       status: false,
+//       message: error.message
+//     });
+//   }
+// }
 
 
 
@@ -25,12 +59,6 @@ exports.login = async (req, res) => {
     // Check if the user has a valid password stored
     if (!user.password || typeof user.password !== 'string') {
       return res.status(500).json({ status: 500, message: "User password is invalid" });
-    }
-
-    // Validate password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ status: 401, message: "Invalid Password" });
     }
 
     // Log user's login details if the login is successful
@@ -171,7 +199,59 @@ exports.login = async (req, res) => {
   };
 
 
-exports.registerUser = async(req, res, next) => {
+// exports.registerUser = async(req, res, next) => {
+//   try {
+//     let { name, email, password } = req.body;
+
+//     // Check if user already exists
+//     let user = await User.findOne({ email });
+//     if (user) {
+//       return res.status(409).json({
+//         status: 409,
+//         message: "Email already exists",
+//       });
+//     }
+
+//     // Hash password before storing it
+//     password = await bcrypt.hash(password, 12);
+
+//     // Handle profile_image from the uploaded files
+//     let profile_image = "default_profile.png"; // Default profile image
+//     if (req?.files) {
+//       req.files.map((file) => {
+//         if (file.fieldname === "profile_image") {
+//           profile_image = file.filename;
+//         }
+//       });
+//     }
+
+//     // Create the user in the database
+//     let userData = await User.create({
+//       name,
+//       email,
+//       password,
+//       profile_image,
+//     });
+
+//     // Construct the full user name response
+//     let user_full_name = `${userData.name} User Created`;
+
+//     // Respond with success and the created user's data
+//     return res.status(201).json({
+//       status: true,
+//       message: "User created successfully",
+//       userData,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).json({
+//       status: false,
+//       message: error.message,
+//     });
+//   }
+// }
+
+exports.registerUser = async (req, res, next) => {
   try {
     let { name, email, password } = req.body;
 
@@ -184,9 +264,6 @@ exports.registerUser = async(req, res, next) => {
       });
     }
 
-    // Hash password before storing it
-    password = await bcrypt.hash(password, 12);
-
     // Handle profile_image from the uploaded files
     let profile_image = "default_profile.png"; // Default profile image
     if (req?.files) {
@@ -197,11 +274,11 @@ exports.registerUser = async(req, res, next) => {
       });
     }
 
-    // Create the user in the database
+    // Create the user in the database with the password in plain text
     let userData = await User.create({
       name,
       email,
-      password,
+      password, // Save password directly without hashing
       profile_image,
     });
 
@@ -221,6 +298,134 @@ exports.registerUser = async(req, res, next) => {
       message: error.message,
     });
   }
-}
+};
+
+// exports.ForgotPassword = async (req, res, next) => {
+//   try {
+//     const { email, newPassword, confirmPassword, OTP } = req.body; // Extract data from request body
+
+//     // Check if all fields are provided
+//     if (!email || !newPassword || !confirmPassword || !OTP) {
+//       return res.status(400).json({ message: 'Please provide email, newPassword, confirmPassword, and OTP.' });
+//     }
+
+//     // Check if both password fields match
+//     if (newPassword !== confirmPassword) {
+//       return res.status(400).json({ message: 'Passwords do not match.' });
+//     }
+
+//     // Find the user by email
+//     const user = await User.findOne({ email });
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found.' });
+//     }
+
+//     // Check if OTP matches and if it has not expired
+//     if (user.OTP !== parseInt(OTP)) {
+//       return res.status(400).json({ message: 'Invalid OTP.' });
+//     }
+//     if (user.resetPasswordExpire < Date.now()) {
+//       return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+//     }
+
+//     // Hash the new password before saving
+//     const hashedPassword = await bcrypt.hash(newPassword, 12);
+//     user.password = hashedPassword;
+
+//     // Clear OTP and expiration after password reset
+//     user.resetPasswordOtp = undefined;
+//     user.resetPasswordExpire = undefined;
+
+//     // Save the updated user document
+//     await user.save();
+
+//     res.json({ message: 'Password successfully updated.' });
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Server error. Please try again later.' });
+//   }
+// };
+
+exports.ForgotPassword = async (req, res, next) => {
+  try {
+    const { email, newPassword, confirmPassword, OTP } = req.body;
+
+    // Check if all fields are provided
+    if (!email || !newPassword || !confirmPassword || !OTP) {
+      return res.status(400).json({ message: 'Please provide email, newPassword, confirmPassword, and OTP.' });
+    }
+
+    // Check if both password fields match
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match.' });
+    }
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Check if OTP matches and if it has not expired
+    if (user.OTP !== parseInt(OTP)) {
+      return res.status(400).json({ message: 'Invalid OTP.' });
+    }
+    if (user.resetPasswordExpire < Date.now()) {
+      return res.status(400).json({ message: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Update the password directly without hashing
+    user.password = newPassword;
+
+    // Clear OTP and expiration after password reset
+    user.OTP = undefined;
+    user.resetPasswordExpire = undefined;
+
+    // Save the updated user document
+    await user.save();
+
+    res.json({ message: 'Password successfully updated.' });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error. Please try again later.' });
+  }
+};
 
 
+
+
+exports.SendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    // Generate a 6-digit OTP and set expiration (e.g., 10 minutes)
+    const otpDigit = Math.floor(100000 + Math.random() * 900000); // Generate a 6-digit random number
+    const otpExpire = Date.now() + 10 * 60 * 1000; // Set expiration for 10 minutes
+
+    // Save OTP and expiration time in user document
+    user.OTP = otpDigit;
+    user.resetPasswordExpire = otpExpire;
+    await user.save();
+
+    // Send OTP to user's email
+    const message = `Your password reset OTP is: ${otpDigit}. It will expire in 10 minutes.`;
+    const result = await sendMail(user.email, 'Password Reset OTP', message);
+
+    if (result.success) {
+      res.json({ message: 'OTP sent to your email address.' });
+    } else {
+      res.status(500).json({ message: result.message });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error. Please try again later.' });
+  }
+};

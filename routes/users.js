@@ -5,6 +5,7 @@ let user_Controler = require("../controllers/crud_controler/user");
 const marketFreezeMiddleware = require('../middleware/freeze');
 
 
+router.patch("/userdetails-updated/:id",multer.any(),user_Controler.userUpdated)
 
 router.post("/add-team/:userId",multer.any(),marketFreezeMiddleware,user_Controler.addTeam);
 router.get('/market-status',user_Controler.market_Status);
@@ -27,5 +28,6 @@ router.post("/updateTeam/:userId",marketFreezeMiddleware,user_Controler.playerBu
 router.patch("/sell-player/:userId",marketFreezeMiddleware,user_Controler.sellPlayer)
 
 
+router.get("/banner_text",user_Controler.textList)
 
 module.exports = router;
